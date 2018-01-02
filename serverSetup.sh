@@ -25,7 +25,7 @@ else
 fi
 
 echo -n "[*] Installing OpenJDK 8... "
-apt-get -y -q=2 install openjdk-8-jre 2> /dev/null
+apt-get -y -q=2 install openjdk-8-jre > /dev/null 2>&1
 if [ $? != 0 ]; then
     echo -e "${ERROR}Failure\n[-] Error: An error occurred while installing OpenJDK 8. 'apt-get install openjdk-8-jre' returned $?"
     exit 1
@@ -35,7 +35,7 @@ fi
 
 # Add elastic.co's public key to the sources.list
 echo -n "[*] Grabbing elastic.co's public key... "
-wget -q0 - https://artifcats.elastic.co/GPG-KEY-elasticsearch | apt-key add -
+wget -qO - https://artifacts.elastic.co/GPG-KEY-elasticsearch | apt-key add -
 if [ $? != 0 ]; then
     echo -e "${ERROR}Failure\n[-] Error: An error occurred while getting and installing elastic.co's public key. 'apt-key add -' returned $?"
     exit 1
