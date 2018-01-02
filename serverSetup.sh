@@ -9,21 +9,40 @@ WARNING="\033[1;33m" # Yellow
 NC="\033[0m"         # No color
 
 # You must be root to run this script
-if [ $(id -u) != 0 ]
-then
+if [ $(id -u) != 0 ]; then
     echo -e "${ERROR}[-] Error: You must be root to run this script${NC}"
-    exit
+    exit 1
 fi
 
-# TODO: Add a command line argument to skip all confirmations
-# Install Java8. We'll do this by adding another repository to apt
-echo -en "${WARNING}[*] Warning:${NC} The following repository will be added ppa:webupd8team/java. Is this okay? [y/N] "
-read -n 1 RESPONSE
-
-if [[ $RESPONSE != "\r" ]]; then echo ""; fi  # Keep consistent lines
-if [[ $RESPONSE != "y" && $RESPONSE != "Y" ]]
-then
-    echo skipping
+# Install Java. Java is required by the ELK stack
+echo -n "[*] Updating apt repositories... "
+apt-get -q=2 update 2> /dev/null
+if [ $? != 0 ]; then
+    echo -e "${ERROR}Failure\n[-] Error: An error occured while updating repositories. 'apt-get update' returned $?"
+    exit 1
 else
-    echo installing
+    echo -e "${SUCCESS}Success${NC}"
 fi
+
+echo -n "[*] Installing OpenJDK 8... "
+apt-get -y -q=2 install openjdk-8-jre 2> /dev/null
+if [ $? != 0 ]; then
+    echo -e "${ERROR}Failure\n[-] Error: An error occurred while installing OpenJDK 8. 'apt-get install openjdk-8-jre' returned $?"
+    exit 1
+else
+    echo -e "${SUCCESS}Success${NC}"
+fi
+
+# Add elastic.co's public key to the sources.list
+echo -n "[*] Grabbing elastic.co's public key... "
+wget -q0 - https://artifcats.elastic.co/GPG-KEY-elasticsearch | apt-key add -
+if [ $? != 0 ]; then
+    echo -e "${ERROR}Failure\n[-] Error: An error occurred while getting and installing elastic.co's public key. 'apt-key add -' returned $?"
+    exit 1
+else
+    echo -e "${SUCCESS}Success${NC}"
+fi
+
+# Update and install elasticsearch, kibana, and logstash
+echo -n "[*] Installing elasticsearch, logstash, and kibana... "
+apt-get -y -q2 install apt-transport-https elasticsearch logstash kibana
