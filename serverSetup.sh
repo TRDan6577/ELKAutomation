@@ -52,7 +52,7 @@ fi
 }
 
 # Make sure the repositories are up to date
-update_repos()
+update_repos
 
 # Install OpenJDK. Java is required by the elasticsearch
 echo -n "[*] Installing OpenJDK 8... "
@@ -69,9 +69,9 @@ echo "deb https://artifacts.elastic.co/packages/6.x/apt stable main" >> /etc/apt
 echo -e "[*] Adding the repository to the list in /etc/sources...${SUCCESS}Success${NC}"
 
 # Update again with the new repository
-update_repos()
+update_repos
 
 # Install elasticsearch, kibana, and logstash
 echo -n "[*] Installing elasticsearch, logstash, kibana, and apt-transport-https... "
 apt-get -y -q2 install apt-transport-https elasticsearch logstash kibana > /dev/null 2>&1
-check_error() "attempting to install the packages" "apt-get install" $?
+check_error "attempting to install the packages" "apt-get install" $?
