@@ -33,9 +33,9 @@ else
     echo -e "${SUCCESS}Success${NC}"
 fi
 
-# Add elastic.co's public key to the sources.list
+# Add elastic.co's public key
 echo -n "[*] Grabbing elastic.co's public key... "
-wget -qO - https://artifacts.elastic.co/GPG-KEY-elasticsearch | apt-key add -
+wget -qO - https://artifacts.elastic.co/GPG-KEY-elasticsearch | apt-key add - > /dev/null 2>&1
 if [ $? != 0 ]; then
     echo -e "${ERROR}Failure\n[-] Error: An error occurred while getting and installing elastic.co's public key. 'apt-key add -' returned $?"
     exit 1
@@ -43,6 +43,10 @@ else
     echo -e "${SUCCESS}Success${NC}"
 fi
 
+# Add the repository definition
+echo "deb https://artificats.elastic.co/packages/6.x/apt stable main" | tee -a /etc/apt/sources.list.d/elastic-6.x.list
+echo "[*] Adding the repository to the list in /etc/sources...${SUCCESS}Success${NC}"
+
 # Update and install elasticsearch, kibana, and logstash
 echo -n "[*] Installing elasticsearch, logstash, and kibana... "
-apt-get -y -q2 install apt-transport-https elasticsearch logstash kibana
+apt-get update > /dev/null 2>&1 && apt-get -y -q2 install apt-transport-https elasticsearch logstash kibana > /dev/null 2>&1
