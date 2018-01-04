@@ -90,6 +90,8 @@ generate_certs() {
     # Create the necessary folders
     mkdir -p /etc/pki/elk/logstash/certs 
     mkdir $CERT_DIR/logstash/private
+    mkdir -p /etc/pki/elk/kibana/certs 
+    mkdir $CERT_DIR/kibana/private
     mkdir -p $CERT_DIR/certs
     mkdir $CERT_DIR/private
 
@@ -97,7 +99,7 @@ generate_certs() {
     # TODO: Error check
     openssl genrsa -out /etc/pki/elk/private/server_root.key 4092
     echo -e "${SUCCESS}[+] Generated root key in $CERT_DIR/private/${NC}"
-    openssl req -x509 -new -nodes -key /etc/pki/elk/private/server_root.key -sha256 -days 3650 -out /etc/pki/elk/certs/server_root.pem
+    openssl req -x509 -new -nodes -key $CERT_DIR/private/server_root.key -sha256 -days 3650 -out /etc/pki/elk/certs/server_root.pem
     echo -e "${SUCCESS}[+] Generated root certificate in $CERT_DIR/certs/${NC}"
 
     # Generate the Logstash certificate and key
