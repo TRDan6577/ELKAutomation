@@ -98,21 +98,21 @@ generate_certs() {
     # Generate the root certificate and key
     # TODO: Error check
     openssl genrsa -out /etc/pki/elk/private/server_root.key 4092
-    echo -e "${SUCCESS}[+] Generated root key in $CERT_DIR/private/${NC}"
-    openssl req -x509 -new -nodes -key $CERT_DIR/private/server_root.key -sha256 -days 3650 -out /etc/pki/elk/certs/server_root.pem
-    echo -e "${SUCCESS}[+] Generated root certificate in $CERT_DIR/certs/${NC}"
+    echo -e "  ${SUCCESS}[+] Generated root key in $CERT_DIR/private/${NC}"
+    openssl req -x509 -new -nodes -key $CERT_DIR/private/server_root.key -sha256 -days 3650 -out /etc/pki/elk/certs/server_root.pem -config <( cat server_root.conf )
+    echo -e "  ${SUCCESS}[+] Generated root certificate in $CERT_DIR/certs/${NC}"
 
     # Generate the Logstash certificate and key
     openssl req -new -sha256 -nodes -out $CERT_DIR/logstash/private/logstash.csr -newkey rsa:4092 -keyout $CERT_DIR/logstash/private/logstash.key -config <( cat server_root.conf )
-    echo -e "${SUCCESS}[+] Generated logstash key in $CERT_DIR/logstash/private/${NC}"
+    echo -e "  ${SUCCESS}[+] Generated logstash key in $CERT_DIR/logstash/private/${NC}"
     openssl x509 -req -in $CERT_DIR/logstash/private/logstash.csr -CA $CERT_DIR/certs/server_root.pem -CAkey $CERT_DIR/private/server_root.key -CAcreateserial -out $CERT_DIR/logstash/certs/logstash.crt -days 3650 -sha256 -extfile v3.ext
-    echo -e "${SUCCESS}[+] Generated logstash cert in $CERT_DIR/logstash/certs/${NC}"
+    echo -e "  ${SUCCESS}[+] Generated logstash cert in $CERT_DIR/logstash/certs/${NC}"
 
     # Generate the Kibana certificate and key
     openssl req -new -sha256 -nodes -out $CERT_DIR/kibana/private/kibana.csr -newkey rsa:4092 -keyout $CERT_DIR/kibana/private/kibana.key -config <( cat server_root.conf )
-    echo -e "${SUCCESS}[+] Generated kibana key in $CERT_DIR/kibana/private/${NC}"
+    echo -e "  ${SUCCESS}[+] Generated kibana key in $CERT_DIR/kibana/private/${NC}"
     openssl x509 -req -in $CERT_DIR/kibana/private/kibana.csr -CA $CERT_DIR/certs/server_root.pem -CAkey $CERT_DIR/private/server_root.key -CAcreateserial -out $CERT_DIR/kibana/certs/kibana.crt -days 3650 -sha256 -extfile v3.ext
-    echo -e "${SUCCESS}[+] Generated kibana cert in $CERT_DIR/kibana/certs/${NC}"
+    echo -e "  ${SUCCESS}[+] Generated kibana cert in $CERT_DIR/kibana/certs/${NC}"
 }
 
 # Make sure the repositories are up to date
