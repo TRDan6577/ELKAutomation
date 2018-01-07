@@ -21,6 +21,13 @@ options that are only used in very specific cirumstances.
 ## Installation
 `git clone https://github.com/trdan6577/elkautomation.git`
 
+## Prerequisites
+* The server that will be running the ELK stack should have a DNS resolvable hostname.
+If this is not the case, you will not be able to generate certificates using this program
+(at this point in time)
+* ELKAutomation currently only supports systems that use the apt package manager.
+Contributions to ELKAutomation that have support for other systems are welcome =)
+
 ## Usage
 ### Server Setup
 Place the automation.conf file and the serversetup.sh file onto the server you want
