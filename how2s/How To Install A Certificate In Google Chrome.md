@@ -1,4 +1,4 @@
-# How To Install A Certificate In Google Chrome (images to come later)
+# How To Install A Certificate In Google Chrome
 * Get the root\_ca certificate (default path is /etc/pki/elk/certs/server\_root.pem) and put it somewhere on your machine
 * Open up Google Chrome and click the menu button in the top right hand corner
 * Click 'Settings'
