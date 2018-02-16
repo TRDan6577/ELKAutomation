@@ -1,5 +1,6 @@
 # ELKAutomation
-For a quick and easy ELK stack server install
+For a quick and easy ELK stack server install - PLEASE NOTE THAT THIS IS NOT A COMPLETED
+PROJECT AND THAT IT IS STILL A WORK IN PROGRESS
 
 ## What is it
 ELKAutomation is a series of scripts and configuration files that make installing
