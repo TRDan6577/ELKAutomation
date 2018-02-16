@@ -135,11 +135,30 @@ echo -e "[*] Adding the repository to the list in /etc/sources...${SUCCESS}Succe
 # Update again with the new repository
 update_repos
 
-# Install elasticsearch, kibana, and logstash
-echo -n "[*] Installing elasticsearch, logstash, kibana, and apt-transport-https... "
-apt-get -y -q2 install apt-transport-https elasticsearch logstash kibana > /dev/null 2>&1
+# Install elasticsearch, kibana, logstash, and nginx
+echo -n "[*] Installing elasticsearch, logstash, kibana, nginx, and apt-transport-https... "
+apt-get -y -q2 install apt-transport-https elasticsearch logstash kibana nginx > /dev/null 2>&1
 check_error "attempting to install the packages" "apt-get install" $?
 
 # Generate certificates. The certificate generation done here satisfies the
 # strict Chrome/Chromium requirements for self-signed certs
 generate_certs
+
+# Configure elasticsearch. We want to listen on localhost:9200
+echo -n "[*] Configuring elasticsearch... "
+sudo sed -i -e 's/#network.host: 192.168.0.1/network.host: localhost/g' /etc/elasticsearch/elasticsearch.yml
+sudo sed -i -e 's/#http.port: 9200/http.port: 9200/g' /etc/elasticsearch/elasticsearch.yml
+sudo sed -i -e 's/#node.name: node-1/node.name: ${HOSTNAME}/g' /etc/elasticsearch/elasticsearch.yml
+sudo sed -i -e 's/#cluster.name: my-application/cluster.name: elk-automation/g' /etc/elasticsearch/elasticsearch.yml
+
+# Make sure the heap size is set to below the cutoff JVM uses for compressed
+# object pointers. See https://www.elastic.co/guide/en/elasticsearch/reference/current/heap-size.html
+# for more info
+MEM_TOTAL=$(cat /proc/meminfo | grep MemTotal | awk '{print $2}')
+ES_JAVA_MEM=$((MEM_TOTAL/2048))
+if [ $ES_JAVA_MEM -gt 30000 ]; then
+    ES_JAVA_MEM=25000
+fi
+ES_JAVA_OPTS="-Xms$(echo $ES_JAVA_MEM)m -Xmx$(echo $ES_JAVA_MEM)m"
+export ES_JAVA_OPTS
+echo -e "${SUCCESS}Done${NC}"
