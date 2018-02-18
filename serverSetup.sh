@@ -130,7 +130,7 @@ check_error "getting and installing elastic.co's public key" "apt-key add -" $?
 
 # Add the repository definition
 echo "deb https://artifacts.elastic.co/packages/6.x/apt stable main" >> /etc/apt/sources.list.d/elastic-6.x.list
-echo -e "[*] Adding the repository to the list in /etc/sources...${SUCCESS}Success${NC}"
+echo -e "[*] Adding the repository to the list in /etc/sources... ${SUCCESS}Success${NC}"
 
 # Update again with the new repository
 update_repos
