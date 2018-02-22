@@ -3,12 +3,17 @@
 # File: serverSetup.sh
 # Purpose: Sets up a secure ELK server instance
 
+# Set output color variables
 ERROR="\033[0;31m"   # Red
 SUCCESS="\033[0;32m" # Green
 WARNING="\033[1;33m" # Yellow
 NC="\033[0m"         # No color
 
+# Set configuration variables
 CERT_DIR=/etc/pki/elk
+
+# Read in the config file for any variable value changes
+. automation.conf
 
 # You must be root to run this script
 if [ $(id -u) != 0 ]; then
