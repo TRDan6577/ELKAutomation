@@ -162,3 +162,11 @@ fi
 ES_JAVA_OPTS="-Xms$(echo $ES_JAVA_MEM)m -Xmx$(echo $ES_JAVA_MEM)m"
 export ES_JAVA_OPTS
 echo -e "${SUCCESS}Done${NC}"
+
+# Put the logstash input file for beats in /etc/logstash/conf.d/
+echo -n "[*] Configuring logstash... "
+if ! [ -d /etc/logstash/conf.d ]; then
+    mkdir -p /etc/logstash/conf.d/
+    chown -R logstash:logstash /etc/logstash
+mv beatsinput.cof /etc/logstash/conf.d/
+echo -d "${SUCCESS}Success${NC}"
