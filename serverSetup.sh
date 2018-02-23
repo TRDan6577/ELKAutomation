@@ -174,4 +174,4 @@ if ! [ -d /etc/logstash/conf.d ]; then
     mkdir -p /etc/logstash/conf.d/
     chown -R logstash:logstash /etc/logstash
 mv beatsinput.cof /etc/logstash/conf.d/
-echo -d "${SUCCESS}Success${NC}"
+echo -e "${SUCCESS}Success${NC}"
