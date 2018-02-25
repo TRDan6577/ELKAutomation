@@ -93,10 +93,12 @@ generate_certs() {
     echo "[*] Generating certificates..."
 
     # Create the necessary folders
-    mkdir -p /etc/pki/elk/logstash/certs 
+    mkdir -p $CERT_DIR/logstash/certs 
     mkdir $CERT_DIR/logstash/private
-    mkdir -p /etc/pki/elk/kibana/certs 
+    mkdir -p $CERT_DIR/kibana/certs 
     mkdir $CERT_DIR/kibana/private
+    mkdir -p $CERT_DIR/client_beat/certs
+    mkdir $CERT_DIR/client_beat/private
     mkdir -p $CERT_DIR/certs
     mkdir $CERT_DIR/private
 
@@ -118,6 +120,12 @@ generate_certs() {
     echo -e "  ${SUCCESS}[+] Generated kibana key in $CERT_DIR/kibana/private/${NC}"
     openssl x509 -req -in $CERT_DIR/kibana/private/kibana.csr -CA $CERT_DIR/certs/server_root.pem -CAkey $CERT_DIR/private/server_root.key -CAcreateserial -out $CERT_DIR/kibana/certs/kibana.crt -days 3650 -sha256 -extfile v3.ext
     echo -e "  ${SUCCESS}[+] Generated kibana cert in $CERT_DIR/kibana/certs/${NC}"
+
+    # Generate the client certificate and key
+    openssl req -new -sha256 -nodes -out $CERT_DIR/client_beat/private/client_beat.csr -newkey rsa:4092 -keyout $CERT_DIR/client_beat/private/client_beat.key -config <( cat client.conf )
+    echo -e "  ${SUCCESS}[+] Generated client key in $CERT_DIR/client_beat/private/${NC}"
+    openssl x509 -req -in $CERT_DIR/client_beat/private/client_beat.csr -CA $CERT_DIR/certs/server_root.pem -CAkey $CERT_DIR/private/server_root.key -CAcreateserial -out $CERT_DIR/client_beat/certs/client_beat.crt -days 3650 -sha256
+    echo -e "  ${SUCCESS}[+] Generated client cert in $CERT_DIR/client_beat/certs/${NC}"
 }
 
 # Make sure the repositories are up to date
