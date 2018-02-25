@@ -173,5 +173,5 @@ echo -n "[*] Configuring logstash... "
 if ! [ -d /etc/logstash/conf.d ]; then
     mkdir -p /etc/logstash/conf.d/
     chown -R logstash:logstash /etc/logstash
-mv beatsinput.cof /etc/logstash/conf.d/
+mv beatsinput.conf /etc/logstash/conf.d/
 echo -e "${SUCCESS}Success${NC}"
