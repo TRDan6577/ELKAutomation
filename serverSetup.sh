@@ -11,6 +11,7 @@ NC="\033[0m"         # No color
 
 # Set configuration variables
 CERT_DIR=/etc/pki/elk
+IP_ADDR=$(ip route get 8.8.8.8 | awk 'NR==1 {print$NF}')
 
 # Read in the config file for any variable value changes
 . automation.conf
@@ -105,6 +106,8 @@ generate_certs() {
     mkdir $CERT_DIR/kibana/private
     mkdir -p $CERT_DIR/client_beat/certs
     mkdir $CERT_DIR/client_beat/private
+    mkdir -p $CERT_DIR/nginx/certs
+    mkdir $CERT_DIR/nginx/private
     mkdir -p $CERT_DIR/certs
     mkdir $CERT_DIR/private
 
@@ -132,6 +135,12 @@ generate_certs() {
     echo -e "  ${SUCCESS}[+] Generated client key in $CERT_DIR/client_beat/private/${NC}"
     openssl x509 -req -in $CERT_DIR/client_beat/private/client_beat.csr -CA $CERT_DIR/certs/server_root.pem -CAkey $CERT_DIR/private/server_root.key -CAcreateserial -out $CERT_DIR/client_beat/certs/client_beat.crt -days 3650 -sha256
     echo -e "  ${SUCCESS}[+] Generated client cert in $CERT_DIR/client_beat/certs/${NC}"
+
+    # Generate the nginx certificate and key
+    openssl req -new -sha256 -nodes -out $CERT_DIR/nginx/private/nginx.csr -newkey rsa:4092 -keyout $CERT_DIR/nginx/private/nginx.key -config <( cat server_root.conf )
+    echo -e "  ${SUCCESS}[+] Generated nginx key in $CERT_DIR/nginx/private/${NC}"
+    openssl x509 -req -in $CERT_DIR/nginx/private/nginx.csr -CA $CERT_DIR/certs/server_root.pem -CAkey $CERT_DIR/private/server_root.key -CAcreateserial -out $CERT_DIR/nginx/certs/nginx.crt -days 3650 -sha256 -extfile v3.ext
+    echo -e "  ${SUCCESS}[+] Generated nginx cert in $CERT_DIR/nginx/certs/${NC}"
 }
 
 # Make sure the repositories are up to date
@@ -189,4 +198,29 @@ if ! [ -d /etc/logstash/conf.d ]; then
 fi
 mv beatsinput.conf /etc/logstash/conf.d/
 chown -R logstash:logstash /etc/logstash
+echo -e "${SUCCESS}Success${NC}"
+
+# Configure nginx
+# TODO: make a sed command that updates the directories in the nginx 'default' file
+echo -n "[*] Configuring nginx... "
+mv default /etc/nginx/sites-enabled/default
+sed -i -e 's/\"INSERT IP ADDRESS HERE\"/'"$(ip route get 8.8.8.8 | awk 'NR==1 {print $NF}')"'/g' /etc/nginx/sites-enabled/default
+# TODO: maybe error check to make sure that the subshell actually gives back
+# an IP address and that the address isn't the loopback
+chown nginx:nginx /etc/nginx/sites-enabled/default
+mkdir $CERTS_DIR/nginx/dhparams/
+echo -e "${SUCCESS}Success${NC}"
+
+# Generate the dhparams for nginx
+echo -e "[*] Creating dhparams file for nginx - ${WARNING}WARNING - THIS WILL TAKE A LONG TIME${NC}"
+openssl dhparam -out $CERTS_DIR/nginx/dhgroup/dhparam.pem 1024  # will increase size later
+echo -e "${SUCCESS}Success${NC}"
+
+# Start all the services! We're done =)
+# TODO: Error check these
+echo -n "[*] Starting elasticsearch, logstash, kibana, and nginx... "
+service elasticsearch start
+service logstash start
+service kibana start
+service nginx start
 echo -e "${SUCCESS}Success${NC}"
