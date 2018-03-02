@@ -59,6 +59,13 @@ prereq_check(){
             address. Please set it manually in automation.conf."
         exit 1
     fi
+
+    # Get the password for the nginx logon (taken from stackoverflow)
+    stty -echo
+    printf "Enter the password to be used for nginx authentication: "
+    read $PASSWORD
+    stty echo
+    printf "\n"
 }
 
 ############################ Function definitions #############################
@@ -216,9 +223,11 @@ echo -e "[*] Adding the repository to the list in /etc/sources... ${SUCCESS}Succ
 # Update again with the new repository
 update_repos
 
-# Install elasticsearch, kibana, logstash, and nginx
+# Install elasticsearch, kibana, logstash, apt-transport-https, apache2-utils,
+# and nginx
 echo -n "[*] Installing elasticsearch, logstash, kibana, nginx, and apt-transport-https... "
-apt-get -y -q2 install apt-transport-https elasticsearch logstash kibana nginx > /dev/null 2>&1
+apt-get -y -q2 install apt-transport-https elasticsearch logstash kibana nginx \
+    apache2-utils > /dev/null 2>&1
 check_error "attempting to install the packages" "apt-get install" $?
 
 # Generate certificates. The certificate generation done here satisfies the
@@ -259,11 +268,12 @@ mv default /etc/nginx/sites-enabled/default
 sed -i -e 's/\"INSERT IP ADDRESS HERE\"/'"$IP_ADDR"'/g' /etc/nginx/sites-enabled/default
 sed -i -e 's/\"CERTS DIR HERE\"/'"$CERT_DIR"'/g' /etc/nginx/sites-enabled/default
 chown nginx:nginx /etc/nginx/sites-enabled/default
-mkdir $CERT_DIR/nginx/dhparams/
+sudo htpasswd -c /etc/nginx/.htpasswd admin $PASSWORD
 echo -e "${SUCCESS}Success${NC}"
 
 # Generate the dhparams for nginx
 echo -e "[*] Creating dhparams file for nginx - ${WARNING}WARNING - THIS WILL TAKE A LONG TIME${NC}"
+mkdir $CERT_DIR/nginx/dhparams/
 openssl dhparam -out $CERT_DIR/nginx/dhgroup/dhparam.pem 1024  # TODO: increase size later
 echo -e "${SUCCESS}Success${NC}"
 
@@ -278,3 +288,7 @@ check_error "attempting to start kibana" "service kibana start" $?
 service nginx start
 check_error "attempting to start nginx" "service nginx start" $?
 echo -e "${SUCCESS}Success${NC}"
+
+echo "\n\n${SUCCESS}[+] Successfully installed the ELK stack${NC}\n Your \
+    username for nginx's basic authentication prompt is admin. The password \
+    is the password you configured earlier. Have fun!"
