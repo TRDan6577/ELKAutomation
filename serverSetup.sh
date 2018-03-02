@@ -16,28 +16,50 @@ IP_ADDR=$(ip route get 8.8.8.8 | awk 'NR==1 {print$NF}')
 # Read in the config file for any variable value changes
 . automation.conf
 
-# You must be root to run this script
-if [ $(id -u) != 0 ]; then
-    echo -e "${ERROR}[-] Error: You must be root to run this script${NC}"
-    exit 1
-fi
+############################################################
+# Function: prereq_check
+# Purpose:  This function checks to make sure all necessary prerequisites are
+#           met before running the program. This includes the program being run
+#           as root and the certificate configuration files being changed.
+# Arugments:
+#  None
+# Returns:
+#  None. Exits if error occurred
+############################################################
+prereq_check(){
+    # You must be root to run this script
+    if [ $(id -u) != 0 ]; then
+        echo -e "${ERROR}[-] Error: You must be root to run this script${NC}"
+        exit 1
+    fi
 
-# Make sure that the user edited server_root.conf and v3.ext
-if [[ $(sha256sum server_root.conf) == "657f509b06782c95ab44a4e46675139cdb77163402e1e578def076e1c446c328  server_root.conf" ]]; then
-    echo -e "${ERROR}[-] Error: You must fill in information in the server_root.conf file to successfully create certificates"
-    exit 1
-fi
+    # Make sure that the user edited server_root.conf and v3.ext
+    if [[ $(sha256sum server_root.conf) == "657f509b06782c95ab44a4e46675139cdb77163402e1e578def076e1c446c328  server_root.conf" ]]; then
+        echo -e "${ERROR}[-] Error: You must fill in information in the \
+            server_root.conf file to successfully create certificates"
+        exit 1
+    fi
 
-if [[ $(sha256sum v3.ext) == "a0a5335daa6295596852a1758f0c1b3493dd25ffe81c0a44e59b08df97a410a5  v3.ext" ]]; then
-    echo -e "${ERROR}[-] Error: You must fill in information in the v3.ext file to successfully create certificates"
-    exit 1
-fi
+    if [[ $(sha256sum v3.ext) == "a0a5335daa6295596852a1758f0c1b3493dd25ffe81c0a44e59b08df97a410a5  v3.ext" ]]; then
+        echo -e "${ERROR}[-] Error: You must fill in information in the v3.ext \
+            file to successfully create certificates"
+        exit 1
+    fi
 
-# Make sure the user configured the client.conf file for the certificates
-if [[ $(sha256sum client.conf) == "fa5360a90dd5bef3680f351b38ac027bc7bab2e6854a82d55e95f4c4162549b4  client.conf" ]]; then
-    echo -e "${ERROR}[-] Error: You must fill in the information in the client.conf file to successfully create a client certificate"
-    exit 1
-fi
+    # Make sure the user configured the client.conf file for the certificates
+    if [[ $(sha256sum client.conf) == "fa5360a90dd5bef3680f351b38ac027bc7bab2e6854a82d55e95f4c4162549b4  client.conf" ]]; then
+        echo -e "${ERROR}[-] Error: You must fill in the information in the \
+            client.conf file to successfully create a client certificate"
+        exit 1
+    fi
+
+    # Make sure the IP address variable is correctly set
+    if [[ $IP_ADDR == "" ]] || [[ $IP_ADDR == "127.0.0.1" ]]; then
+        echo -e "${ERROR}[-] Error: Unable to automatically set your IP \
+            address. Please set it manually in automation.conf."
+        exit 1
+    fi
+}
 
 ############################ Function definitions #############################
 
@@ -78,10 +100,10 @@ fi
 
 ############################################################
 # Function: generate_certs
-# Purpose:  Generates the root, logstash, and kibana certificates. The 
-#           certificates generated follow the requirements for Chrome/Chromium
-#           so they won't give that angry untrusted page in a web browser.
-#           The directory structure is as follows:
+# Purpose:  Generates the root, logstash, kibana, client, and nginx
+#           certificates. The certificates generated follow the requirements
+#           for Chrome/Chromium so they won't give that angry untrusted page
+#           in a web browser. The directory structure is as follows:
 #               $ROOT_DIR/
 #                 |-- certs/
 #                 |-- private/
@@ -90,6 +112,10 @@ fi
 #                 |   |-- private/
 #                 |-- kibana/
 #                 |   |-- certs/
+#                 |   |-- private/
+#                 |-- nginx/
+#                 |   |-- certs/
+#                 |   |-- dhgroup/
 #                 |   |-- private/
 # Arguments:
 #  $1 - root directory of the certificates. The default is /etc/pki/elk/
@@ -115,33 +141,60 @@ generate_certs() {
     # TODO: Error check
     openssl genrsa -out /etc/pki/elk/private/server_root.key 4092
     echo -e "  ${SUCCESS}[+] Generated root key in $CERT_DIR/private/${NC}"
-    openssl req -x509 -new -nodes -key $CERT_DIR/private/server_root.key -sha256 -days 3650 -out /etc/pki/elk/certs/server_root.pem -config <( cat server_root.conf )
+    openssl req -x509 -new -nodes -key $CERT_DIR/private/server_root.key \
+        -sha256 -days 3650 -out /etc/pki/elk/certs/server_root.pem -config \
+        <( cat server_root.conf )
     echo -e "  ${SUCCESS}[+] Generated root certificate in $CERT_DIR/certs/${NC}"
 
     # Generate the Logstash certificate and key
-    openssl req -new -sha256 -nodes -out $CERT_DIR/logstash/private/logstash.csr -newkey rsa:4092 -keyout $CERT_DIR/logstash/private/logstash.key -config <( cat server_root.conf )
+    openssl req -new -sha256 -nodes -out $CERT_DIR/logstash/private/logstash.csr \
+        -newkey rsa:4092 -keyout $CERT_DIR/logstash/private/logstash.key -config \
+        <( cat server_root.conf )
     echo -e "  ${SUCCESS}[+] Generated logstash key in $CERT_DIR/logstash/private/${NC}"
-    openssl x509 -req -in $CERT_DIR/logstash/private/logstash.csr -CA $CERT_DIR/certs/server_root.pem -CAkey $CERT_DIR/private/server_root.key -CAcreateserial -out $CERT_DIR/logstash/certs/logstash.crt -days 3650 -sha256 -extfile v3.ext
+    openssl x509 -req -in $CERT_DIR/logstash/private/logstash.csr -CA \
+        $CERT_DIR/certs/server_root.pem -CAkey $CERT_DIR/private/server_root.key \
+        -CAcreateserial -out $CERT_DIR/logstash/certs/logstash.crt -days 3650 \
+        -sha256 -extfile v3.ext
     echo -e "  ${SUCCESS}[+] Generated logstash cert in $CERT_DIR/logstash/certs/${NC}"
 
     # Generate the Kibana certificate and key
-    openssl req -new -sha256 -nodes -out $CERT_DIR/kibana/private/kibana.csr -newkey rsa:4092 -keyout $CERT_DIR/kibana/private/kibana.key -config <( cat server_root.conf )
+    openssl req -new -sha256 -nodes -out $CERT_DIR/kibana/private/kibana.csr \
+        -newkey rsa:4092 -keyout $CERT_DIR/kibana/private/kibana.key -config \
+        <( cat server_root.conf )
     echo -e "  ${SUCCESS}[+] Generated kibana key in $CERT_DIR/kibana/private/${NC}"
-    openssl x509 -req -in $CERT_DIR/kibana/private/kibana.csr -CA $CERT_DIR/certs/server_root.pem -CAkey $CERT_DIR/private/server_root.key -CAcreateserial -out $CERT_DIR/kibana/certs/kibana.crt -days 3650 -sha256 -extfile v3.ext
+    openssl x509 -req -in $CERT_DIR/kibana/private/kibana.csr -CA \
+        $CERT_DIR/certs/server_root.pem -CAkey $CERT_DIR/private/server_root.key \
+        -CAcreateserial -out $CERT_DIR/kibana/certs/kibana.crt -days 3650 -sha256 \
+        -extfile v3.ext
     echo -e "  ${SUCCESS}[+] Generated kibana cert in $CERT_DIR/kibana/certs/${NC}"
 
     # Generate the client certificate and key
-    openssl req -new -sha256 -nodes -out $CERT_DIR/client_beat/private/client_beat.csr -newkey rsa:4092 -keyout $CERT_DIR/client_beat/private/client_beat.key -config <( cat client.conf )
+    openssl req -new -sha256 -nodes -out \
+        $CERT_DIR/client_beat/private/client_beat.csr -newkey rsa:4092 -keyout \
+        $CERT_DIR/client_beat/private/client_beat.key -config <( cat client.conf )
     echo -e "  ${SUCCESS}[+] Generated client key in $CERT_DIR/client_beat/private/${NC}"
-    openssl x509 -req -in $CERT_DIR/client_beat/private/client_beat.csr -CA $CERT_DIR/certs/server_root.pem -CAkey $CERT_DIR/private/server_root.key -CAcreateserial -out $CERT_DIR/client_beat/certs/client_beat.crt -days 3650 -sha256
+    openssl x509 -req -in $CERT_DIR/client_beat/private/client_beat.csr -CA \
+        $CERT_DIR/certs/server_root.pem -CAkey $CERT_DIR/private/server_root.key \
+        -CAcreateserial -out $CERT_DIR/client_beat/certs/client_beat.crt -days \
+        3650 -sha256
     echo -e "  ${SUCCESS}[+] Generated client cert in $CERT_DIR/client_beat/certs/${NC}"
 
     # Generate the nginx certificate and key
-    openssl req -new -sha256 -nodes -out $CERT_DIR/nginx/private/nginx.csr -newkey rsa:4092 -keyout $CERT_DIR/nginx/private/nginx.key -config <( cat server_root.conf )
+    openssl req -new -sha256 -nodes -out $CERT_DIR/nginx/private/nginx.csr \
+        -newkey rsa:4092 -keyout $CERT_DIR/nginx/private/nginx.key -config \
+        <( cat server_root.conf )
     echo -e "  ${SUCCESS}[+] Generated nginx key in $CERT_DIR/nginx/private/${NC}"
-    openssl x509 -req -in $CERT_DIR/nginx/private/nginx.csr -CA $CERT_DIR/certs/server_root.pem -CAkey $CERT_DIR/private/server_root.key -CAcreateserial -out $CERT_DIR/nginx/certs/nginx.crt -days 3650 -sha256 -extfile v3.ext
+    openssl x509 -req -in $CERT_DIR/nginx/private/nginx.csr -CA \
+        $CERT_DIR/certs/server_root.pem -CAkey $CERT_DIR/private/server_root.key \
+        -CAcreateserial -out $CERT_DIR/nginx/certs/nginx.crt -days 3650 -sha256 \
+        -extfile v3.ext
     echo -e "  ${SUCCESS}[+] Generated nginx cert in $CERT_DIR/nginx/certs/${NC}"
 }
+
+################################# Script start ################################# 
+
+# Check to make sure the prerequisites are met for the program
+prereq_check
 
 # Make sure the repositories are up to date
 update_repos
@@ -201,26 +254,27 @@ chown -R logstash:logstash /etc/logstash
 echo -e "${SUCCESS}Success${NC}"
 
 # Configure nginx
-# TODO: make a sed command that updates the directories in the nginx 'default' file
 echo -n "[*] Configuring nginx... "
 mv default /etc/nginx/sites-enabled/default
-sed -i -e 's/\"INSERT IP ADDRESS HERE\"/'"$(ip route get 8.8.8.8 | awk 'NR==1 {print $NF}')"'/g' /etc/nginx/sites-enabled/default
-# TODO: maybe error check to make sure that the subshell actually gives back
-# an IP address and that the address isn't the loopback
+sed -i -e 's/\"INSERT IP ADDRESS HERE\"/'"$IP_ADDR"'/g' /etc/nginx/sites-enabled/default
+sed -i -e 's/\"CERTS DIR HERE\"/'"$CERT_DIR"'/g' /etc/nginx/sites-enabled/default
 chown nginx:nginx /etc/nginx/sites-enabled/default
-mkdir $CERTS_DIR/nginx/dhparams/
+mkdir $CERT_DIR/nginx/dhparams/
 echo -e "${SUCCESS}Success${NC}"
 
 # Generate the dhparams for nginx
 echo -e "[*] Creating dhparams file for nginx - ${WARNING}WARNING - THIS WILL TAKE A LONG TIME${NC}"
-openssl dhparam -out $CERTS_DIR/nginx/dhgroup/dhparam.pem 1024  # will increase size later
+openssl dhparam -out $CERT_DIR/nginx/dhgroup/dhparam.pem 1024  # TODO: increase size later
 echo -e "${SUCCESS}Success${NC}"
 
 # Start all the services! We're done =)
-# TODO: Error check these
 echo -n "[*] Starting elasticsearch, logstash, kibana, and nginx... "
 service elasticsearch start
+check_error "attempting to start elasticsearch" "service elasticsearch start" $?
 service logstash start
+check_error "attempting to start logstash" "service logstash start" $?
 service kibana start
+check_error "attempting to start kibana" "service kibana start" $?
 service nginx start
+check_error "attempting to start nginx" "service nginx start" $?
 echo -e "${SUCCESS}Success${NC}"
