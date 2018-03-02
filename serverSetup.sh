@@ -32,6 +32,12 @@ if [[ $(sha256sum v3.ext) == "a0a5335daa6295596852a1758f0c1b3493dd25ffe81c0a44e5
     exit 1
 fi
 
+# Make sure the user configured the client.conf file for the certificates
+if [[ $(sha256sum client.conf) == "fa5360a90dd5bef3680f351b38ac027bc7bab2e6854a82d55e95f4c4162549b4  client.conf" ]]; then
+    echo -e "${ERROR}[-] Error: You must fill in the information in the client.conf file to successfully create a client certificate"
+    exit 1
+fi
+
 ############################ Function definitions #############################
 
 ############################################################
@@ -180,6 +186,7 @@ echo -e "${SUCCESS}Done${NC}"
 echo -n "[*] Configuring logstash... "
 if ! [ -d /etc/logstash/conf.d ]; then
     mkdir -p /etc/logstash/conf.d/
-    chown -R logstash:logstash /etc/logstash
+fi
 mv beatsinput.conf /etc/logstash/conf.d/
+chown -R logstash:logstash /etc/logstash
 echo -e "${SUCCESS}Success${NC}"
