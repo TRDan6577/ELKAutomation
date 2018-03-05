@@ -28,7 +28,7 @@ server {
     add_header Strict-Transport-Security "max-age 63072000; includeSubdomains";
     add_header X-Frame-Options DENY;
     add_header X-Content-Type-Options nosniff;
-    ssl_dhparam "CERTS DIR HERE"nginx/dhgroup/dhparam.pem
+    ssl_dhparam "CERTS DIR HERE"nginx/dhgroup/dhparam.pem;
     ssl_certificate "CERTS DIR HERE"nginx/certs/nginx.crt;
     ssl_certificate_key "CERTS DIR HERE"nginx/private/nginx.key;
 

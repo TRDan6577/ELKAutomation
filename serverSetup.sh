@@ -35,28 +35,28 @@ prereq_check(){
 
     # Make sure that the user edited server_root.conf and v3.ext
     if [[ $(sha256sum server_root.conf) == "657f509b06782c95ab44a4e46675139cdb77163402e1e578def076e1c446c328  server_root.conf" ]]; then
-        echo -e "${ERROR}[-] Error: You must fill in information in the \
-            server_root.conf file to successfully create certificates"
+        echo -e "${ERROR}[-] Error: You must fill in information in the"\
+            "server_root.conf file to successfully create certificates"
         exit 1
     fi
 
     if [[ $(sha256sum v3.ext) == "a0a5335daa6295596852a1758f0c1b3493dd25ffe81c0a44e59b08df97a410a5  v3.ext" ]]; then
-        echo -e "${ERROR}[-] Error: You must fill in information in the v3.ext \
-            file to successfully create certificates"
+        echo -e "${ERROR}[-] Error: You must fill in information in the v3.ext"\
+            "file to successfully create certificates"
         exit 1
     fi
 
     # Make sure the user configured the client.conf file for the certificates
     if [[ $(sha256sum client.conf) == "fa5360a90dd5bef3680f351b38ac027bc7bab2e6854a82d55e95f4c4162549b4  client.conf" ]]; then
-        echo -e "${ERROR}[-] Error: You must fill in the information in the \
-            client.conf file to successfully create a client certificate"
+        echo -e "${ERROR}[-] Error: You must fill in the information in the"\
+            "client.conf file to successfully create a client certificate"
         exit 1
     fi
 
     # Make sure the IP address variable is correctly set
     if [[ $IP_ADDR == "" ]] || [[ $IP_ADDR == "127.0.0.1" ]]; then
-        echo -e "${ERROR}[-] Error: Unable to automatically set your IP \
-            address. Please set it manually in automation.conf."
+        echo -e "${ERROR}[-] Error: Unable to automatically set your IP"\
+            "address. Please set it manually in automation.conf."
         exit 1
     fi
 
@@ -258,7 +258,7 @@ echo -n "[*] Configuring logstash... "
 if ! [ -d /etc/logstash/conf.d ]; then
     mkdir -p /etc/logstash/conf.d/
 fi
-mv beatsinput.conf /etc/logstash/conf.d/
+mv beatsInput.conf /etc/logstash/conf.d/
 chown -R logstash:logstash /etc/logstash
 echo -e "${SUCCESS}Success${NC}"
 
@@ -266,29 +266,30 @@ echo -e "${SUCCESS}Success${NC}"
 echo -n "[*] Configuring nginx... "
 mv default /etc/nginx/sites-enabled/default
 sed -i -e 's/\"INSERT IP ADDRESS HERE\"/'"$IP_ADDR"'/g' /etc/nginx/sites-enabled/default
-sed -i -e 's/\"CERTS DIR HERE\"/'"$CERT_DIR"'/g' /etc/nginx/sites-enabled/default
-chown nginx:nginx /etc/nginx/sites-enabled/default
-sudo htpasswd -c /etc/nginx/.htpasswd admin $PASSWORD
+sed -i -e 's|\"CERTS DIR HERE\"|'"$CERT_DIR"'|g' /etc/nginx/sites-enabled/default
+sudo htpasswd -b -c /etc/nginx/.htpasswd admin "$PASSWORD"
 echo -e "${SUCCESS}Success${NC}"
 
 # Generate the dhparams for nginx
 echo -e "[*] Creating dhparams file for nginx - ${WARNING}WARNING - THIS WILL TAKE A LONG TIME${NC}"
-mkdir $CERT_DIR/nginx/dhparams/
+mkdir $CERT_DIR/nginx/dhgroup/
 openssl dhparam -out $CERT_DIR/nginx/dhgroup/dhparam.pem 1024  # TODO: increase size later
 echo -e "${SUCCESS}Success${NC}"
 
 # Start all the services! We're done =)
-echo -n "[*] Starting elasticsearch, logstash, kibana, and nginx... "
+echo -n "[*] Starting elasticsearch... "
 service elasticsearch start
 check_error "attempting to start elasticsearch" "service elasticsearch start" $?
+echo -n "[*] Starting logstash... "
 service logstash start
 check_error "attempting to start logstash" "service logstash start" $?
+echo -n "[*] Starting kibana... "
 service kibana start
 check_error "attempting to start kibana" "service kibana start" $?
+echo -n "[*] Starting nginx... "
 service nginx start
 check_error "attempting to start nginx" "service nginx start" $?
-echo -e "${SUCCESS}Success${NC}"
 
-echo "\n\n${SUCCESS}[+] Successfully installed the ELK stack${NC}\n Your \
-    username for nginx's basic authentication prompt is admin. The password \
-    is the password you configured earlier. Have fun!"
+echo -e "\n\n${SUCCESS}[+] Successfully installed the ELK stack${NC}\n Your"\
+    "username for nginx's basic authentication prompt is admin. The password"\
+    "is the password you configured earlier. Have fun!"
