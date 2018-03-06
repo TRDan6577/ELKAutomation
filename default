@@ -3,14 +3,12 @@
 # HTTP Server. This will send a redirect to the HTTPS server
 server {
     listen 0.0.0.0:80;
-    server_name "INSERT IP ADDRESS HERE";
-    return 301 https://"INSERT IP ADDRESS HERE"$request_uri;
+    return 301 https://$host$request_uri;
 }
 
 # HTTPS Server
 server {
     listen 0.0.0.0:443 ssl;
-    server_name "INSERT IP ADDRESS HERE";
 
     auth_basic "Restricted Access. Unauthorized access prohibited";
     auth_basic_user_file /etc/nginx/.htpasswd;

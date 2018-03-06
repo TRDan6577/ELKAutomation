@@ -265,8 +265,7 @@ echo -e "${SUCCESS}Success${NC}"
 # Configure nginx
 echo -n "[*] Configuring nginx... "
 mv default /etc/nginx/conf.d/default
-sed -i -e 's/\"INSERT IP ADDRESS HERE\"/'"$IP_ADDR"'/g' /etc/nginx/sites-enabled/default
-sed -i -e 's|\"CERTS DIR HERE\"|'"$CERT_DIR"'|g' /etc/nginx/sites-enabled/default
+sed -i -e 's|\"CERTS DIR HERE\"|'"$CERT_DIR"'/|g' /etc/nginx/sites-enabled/default
 sudo htpasswd -b -c /etc/nginx/.htpasswd admin "$PASSWORD"
 echo -e "${SUCCESS}Success${NC}"
 
