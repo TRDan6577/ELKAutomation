@@ -60,12 +60,10 @@ prereq_check(){
         exit 1
     fi
 
-    # Get the password for the nginx logon (taken from stackoverflow)
-    stty -echo
-    printf "Enter the password to be used for nginx authentication: "
-    read $PASSWORD
-    stty echo
-    printf "\n"
+    # Get the password for the nginx logon 
+    echo -n "Enter the password to be used for nginx authentication: "
+    read -s $PASSWORD
+    echo
 }
 
 ############################ Function definitions #############################
@@ -265,6 +263,7 @@ echo -e "${SUCCESS}Success${NC}"
 # Configure nginx
 echo -n "[*] Configuring nginx... "
 sed -i -e 's|\"CERTS DIR HERE\"|'"$CERT_DIR"'/|g' default
+sed -i -e 's/"IP ADDR HERE"/'"$IP_ADDR"'/g' default
 cp default /etc/nginx/sites-available/
 mv default /etc/nginx/sites-enabled/
 sudo htpasswd -b -c /etc/nginx/.htpasswd admin "$PASSWORD"
