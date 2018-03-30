@@ -9,14 +9,19 @@ an installation. The whole process was like fighting a hydra; every time I solve
 issue, 2 more issues came up. While many other people may not have had as much of
 a struggling installing the stack as I have, I figure that these scripts could still
 be useful for people that are laz - I mean ... uhh... efficient. It could also be beneficial
-to those setting up a distributed ELK environment.
+to those setting up a distributed ELK environment, though ELKAutomation does not
+currently support a distributed enviornment.
 
-It's important to note that while the configuration files contain some options,
-there is no future plan for them to contain all configurable options. If the
-configuration file doesn't contain an option that you think it shouuld,
-please send a pull request. The idea with the configuration files is to
-keep it simple. Give options that you think may be used by many people - not
-options that are only used in very specific cirumstances.
+For specific details on how it works, please see the 
+[wiki](https://github.com/TRDan6577/ELKAutomation/wiki).
+
+## Software Installed By ELKAutomation
+* Latest version of [Nginx](https://nginx.com)
+* Latest version of [Elasticsearch](https://elastic.co/products/elasticsearch) (6.x branch only)
+* Latest version of [Logstash](https://elastic.co/products/logstash) (6.x branch only)
+* Latest version of [Kibana](https://elastic.co/products/kibana) (6.x branch only)
+* Latest version of apt-transport-https
+* Latest version of apache2-utils
 
 ## Prerequisites
 * The server that will be running the ELK stack should have a DNS resolvable hostname.
@@ -35,11 +40,9 @@ Contributions to ELKAutomation that have support for other systems are welcome =
 ### Server Setup
 In order to actually install the ELK stack using this program, you MUST edit
 client.conf, server\_root.conf, and v3.ext. Conveniently, the parts you need
-to edit are surrounded by carrots (< >). Just give the value the carrots ask
+to edit are surrounded by carrots (< >). Just give the carrots the value they ask
 for and the remove the carrots. After filling out these three files, just run
 serverSetup.sh with administrative privileges.
 
 ## Things TODO
-* Create a diagram of final product after scripts are done. Include explaination
-can access them
 * Display a warning if client.conf is not filled out

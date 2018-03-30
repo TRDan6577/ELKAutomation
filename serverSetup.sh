@@ -13,6 +13,7 @@ NC="\033[0m"         # No color
 # Set configuration variables
 CERT_DIR=/etc/pki/elk
 IP_ADDR=$(ip route get 8.8.8.8 | awk 'NR==1 {print$NF}')
+DHPARAM_SIZE=1024
 
 # Read in the config file for any variable value changes
 . conf/automation.conf
@@ -144,7 +145,6 @@ generate_certs() {
     mkdir $CERT_DIR/private
 
     # Generate the root certificate and key
-    # TODO: Error check
     openssl genrsa -out /etc/pki/elk/private/server_root.key 4092
     echo -e "  ${SUCCESS}[+] Generated root key in $CERT_DIR/private/${NC}"
     openssl req -x509 -new -nodes -key $CERT_DIR/private/server_root.key \
@@ -273,7 +273,7 @@ echo -e "${SUCCESS}Success${NC}"
 # Generate the dhparams for nginx
 echo -e "[*] Creating dhparams file for nginx - ${WARNING}WARNING - THIS WILL TAKE A LONG TIME${NC}"
 mkdir $CERT_DIR/nginx/dhgroup/
-openssl dhparam -out $CERT_DIR/nginx/dhgroup/dhparam.pem 1024  # TODO: increase size later
+openssl dhparam -out $CERT_DIR/nginx/dhgroup/dhparam.pem $DHPARAM_SIZE
 echo -e "${SUCCESS}Success${NC}"
 
 # Start all the services! We're done =)
