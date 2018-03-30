@@ -62,7 +62,7 @@ prereq_check(){
 
     # Get the password for the nginx logon 
     echo -n "Enter the password to be used for nginx authentication: "
-    read -s $PASSWORD
+    read -s PASSWORD
     echo
 }
 
@@ -286,8 +286,8 @@ echo -n "[*] Starting kibana... "
 service kibana start
 check_error "attempting to start kibana" "service kibana start" $?
 echo -n "[*] Starting nginx... "
-service nginx start
-check_error "attempting to start nginx" "service nginx start" $?
+service nginx restart
+check_error "attempting to restart nginx" "service nginx restart" $?
 
 echo -e "\n\n${SUCCESS}[+] Successfully installed the ELK stack${NC}\n Your"\
     "username for nginx's basic authentication prompt is admin. The password"\
