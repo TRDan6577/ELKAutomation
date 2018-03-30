@@ -264,8 +264,9 @@ echo -e "${SUCCESS}Success${NC}"
 
 # Configure nginx
 echo -n "[*] Configuring nginx... "
-mv default /etc/nginx/conf.d/default
-sed -i -e 's|\"CERTS DIR HERE\"|'"$CERT_DIR"'/|g' /etc/nginx/sites-enabled/default
+sed -i -e 's|\"CERTS DIR HERE\"|'"$CERT_DIR"'/|g' default
+cp default /etc/nginx/sites-available/
+mv default /etc/nginx/sites-enabled/
 sudo htpasswd -b -c /etc/nginx/.htpasswd admin "$PASSWORD"
 echo -e "${SUCCESS}Success${NC}"
 
