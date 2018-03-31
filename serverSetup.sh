@@ -257,6 +257,7 @@ echo -n "[*] Configuring logstash... "
 if ! [ -d /etc/logstash/conf.d ]; then
     mkdir -p /etc/logstash/conf.d/
 fi
+sed -i -e 's|\"CERTS DIR HERE\"|'"$CERT_DIR"'/|g' conf/beatsInput.conf
 mv conf/beatsInput.conf /etc/logstash/conf.d/
 chown -R logstash:logstash /etc/logstash
 echo -e "${SUCCESS}Success${NC}"
