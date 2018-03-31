@@ -46,3 +46,4 @@ serverSetup.sh with administrative privileges.
 
 ## Things TODO
 * Display a warning if client.conf is not filled out
+* Get a way to read a list of clients to make certificates for
