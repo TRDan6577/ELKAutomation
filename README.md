@@ -46,5 +46,5 @@ for and the remove the carrots. After filling out these three files, just run
 serverSetup.sh with administrative privileges.
 
 ## Things TODO
-* Display a warning if client.conf is not filled out
 * Get a way to read a list of clients to make certificates for
+* Have an option for no security (useful in private testing environments)

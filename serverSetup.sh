@@ -14,6 +14,7 @@ NC="\033[0m"         # No color
 CERT_DIR=/etc/pki/elk
 IP_ADDR=$(ip route get 8.8.8.8 | awk 'NR==1 {print$NF}')
 DHPARAM_SIZE=1024
+CLIENT=1  # Assume that the user changed the client.conf file
 
 # Read in the config file for any variable value changes
 . conf/automation.conf
@@ -49,10 +50,25 @@ prereq_check(){
     fi
 
     # Make sure the user configured the client.conf file for the certificates
-    if [[ $(sha256sum conf/client.conf) == "fa5360a90dd5bef3680f351b38ac027bc7bab2e6854a82d55e95f4c4162549b4  conf/client.conf" ]]; then
-        echo -e "${ERROR}[-] Error: You must fill in the information in the"\
-            "client.conf file to successfully create a client certificate"
-        exit 1
+    if [[ $(sha256sum conf/client.conf) == "be486eab65fcb632729bd3c7c0965376a8e716fc6d4f303eb7198e56135bc132  conf/client.conf" ]]; then
+        echo -n -e "${WARNING}[!] WARNING: You must fill in the information in the"\
+            "client.conf file to successfully create a client certificate."\
+            "You may continue without a client certificate, but this means"\
+            "that: \n"\
+            "1) Anyone can send logs to Logstash and it will accept them\n"\
+            "2) The logs sent will not be encrypted.\n\n${NC} Is this"\
+            "acceptable? (y or n): "
+        read ans
+        while [[ $ans != 'y' ]] && [[ $ans != 'n' ]]; do
+            echo -n "Please enter y or n: "
+            read ans
+        done
+        if [[ $ans == 'y' ]]; then
+            CLIENT=0
+        else
+            echo "Exiting..."
+            exit 1
+        fi
     fi
 
     # Make sure the IP address variable is correctly set
@@ -107,7 +123,7 @@ fi
 
 ############################################################
 # Function: generate_certs
-# Purpose:  Generates the root, logstash, kibana, client, and nginx
+# Purpose:  Generates the root, logstash, client, and nginx
 #           certificates. The certificates generated follow the requirements
 #           for Chrome/Chromium so they won't give that angry untrusted page
 #           in a web browser. The directory structure is as follows:
@@ -117,7 +133,7 @@ fi
 #                 |-- logstash/
 #                 |   |-- certs/
 #                 |   |-- private/
-#                 |-- kibana/
+#                 |-- client/
 #                 |   |-- certs/
 #                 |   |-- private/
 #                 |-- nginx/
@@ -135,10 +151,6 @@ generate_certs() {
     # Create the necessary folders
     mkdir -p $CERT_DIR/logstash/certs 
     mkdir $CERT_DIR/logstash/private
-    mkdir -p $CERT_DIR/kibana/certs 
-    mkdir $CERT_DIR/kibana/private
-    mkdir -p $CERT_DIR/client_beat/certs
-    mkdir $CERT_DIR/client_beat/private
     mkdir -p $CERT_DIR/nginx/certs
     mkdir $CERT_DIR/nginx/private
     mkdir -p $CERT_DIR/certs
@@ -163,28 +175,6 @@ generate_certs() {
         -sha256 -extfile conf/v3.ext
     echo -e "  ${SUCCESS}[+] Generated logstash cert in $CERT_DIR/logstash/certs/${NC}"
 
-    # Generate the Kibana certificate and key
-    openssl req -new -sha256 -nodes -out $CERT_DIR/kibana/private/kibana.csr \
-        -newkey rsa:4092 -keyout $CERT_DIR/kibana/private/kibana.key -config \
-        <( cat conf/server_root.conf )
-    echo -e "  ${SUCCESS}[+] Generated kibana key in $CERT_DIR/kibana/private/${NC}"
-    openssl x509 -req -in $CERT_DIR/kibana/private/kibana.csr -CA \
-        $CERT_DIR/certs/server_root.pem -CAkey $CERT_DIR/private/server_root.key \
-        -CAcreateserial -out $CERT_DIR/kibana/certs/kibana.crt -days 3650 -sha256 \
-        -extfile conf/v3.ext
-    echo -e "  ${SUCCESS}[+] Generated kibana cert in $CERT_DIR/kibana/certs/${NC}"
-
-    # Generate the client certificate and key
-    openssl req -new -sha256 -nodes -out \
-        $CERT_DIR/client_beat/private/client_beat.csr -newkey rsa:4092 -keyout \
-        $CERT_DIR/client_beat/private/client_beat.key -config <( cat conf/client.conf )
-    echo -e "  ${SUCCESS}[+] Generated client key in $CERT_DIR/client_beat/private/${NC}"
-    openssl x509 -req -in $CERT_DIR/client_beat/private/client_beat.csr -CA \
-        $CERT_DIR/certs/server_root.pem -CAkey $CERT_DIR/private/server_root.key \
-        -CAcreateserial -out $CERT_DIR/client_beat/certs/client_beat.crt -days \
-        3650 -sha256
-    echo -e "  ${SUCCESS}[+] Generated client cert in $CERT_DIR/client_beat/certs/${NC}"
-
     # Generate the nginx certificate and key
     openssl req -new -sha256 -nodes -out $CERT_DIR/nginx/private/nginx.csr \
         -newkey rsa:4092 -keyout $CERT_DIR/nginx/private/nginx.key -config \
@@ -195,6 +185,25 @@ generate_certs() {
         -CAcreateserial -out $CERT_DIR/nginx/certs/nginx.crt -days 3650 -sha256 \
         -extfile conf/v3.ext
     echo -e "  ${SUCCESS}[+] Generated nginx cert in $CERT_DIR/nginx/certs/${NC}"
+
+    # Make sure that we're using certs for the client
+    if [[ $CLIENT == 1 ]]; then
+        # Create the directories
+        mkdir -p $CERT_DIR/client_beat/certs
+        mkdir $CERT_DIR/client_beat/private
+
+        # Generate the client certificate and key
+        openssl req -new -sha256 -nodes -out \
+            $CERT_DIR/client_beat/private/client_beat.csr -newkey rsa:4092 -keyout \
+            $CERT_DIR/client_beat/private/client_beat.key -config <( cat conf/client.conf )
+        echo -e "  ${SUCCESS}[+] Generated client key in $CERT_DIR/client_beat/private/${NC}"
+        openssl x509 -req -in $CERT_DIR/client_beat/private/client_beat.csr -CA \
+            $CERT_DIR/certs/server_root.pem -CAkey $CERT_DIR/private/server_root.key \
+            -CAcreateserial -out $CERT_DIR/client_beat/certs/client_beat.crt -days \
+            3650 -sha256
+        echo -e "  ${SUCCESS}[+] Generated client cert in $CERT_DIR/client_beat/certs/${NC}"
+    fi
+
 }
 
 ################################# Script start ################################# 
@@ -258,6 +267,10 @@ if ! [ -d /etc/logstash/conf.d ]; then
     mkdir -p /etc/logstash/conf.d/
 fi
 sed -i -e 's|\"CERTS DIR HERE\"|'"$CERT_DIR"'/|g' conf/beatsInput.conf
+# Make sure we're using client certificates
+if [[ $CLIENT != 1 ]]; then
+    sed -i -e "s/true/false  # User didn\'t generate client cert/g" conf/beatsInput.conf
+fi
 mv conf/beatsInput.conf /etc/logstash/conf.d/
 chown -R logstash:logstash /etc/logstash
 echo -e "${SUCCESS}Success${NC}"
