@@ -22,6 +22,7 @@ For specific details on how it works, please see the
 * Latest version of [Kibana](https://elastic.co/products/kibana) (6.x branch only)
 * Latest version of apt-transport-https
 * Latest version of apache2-utils
+* Latest version of OpenJDK 8
 
 ## Prerequisites
 * The server that will be running the ELK stack should have a DNS resolvable hostname.
