@@ -14,7 +14,8 @@ NC="\033[0m"         # No color
 CERT_DIR=/etc/pki/elk
 IP_ADDR=$(ip route get 8.8.8.8 | awk 'NR==1 {print$NF}')
 DHPARAM_SIZE=1024
-CLIENT=1  # Assume that the user changed the client.conf file
+CLIENT=1    # Assume the user changed the client.conf file
+SECURITY=0  # Assume the user doesn't want a secure instance
 
 # Read in the config file for any variable value changes
 . conf/automation.conf
@@ -34,6 +35,13 @@ prereq_check(){
     if [ $(id -u) != 0 ]; then
         echo -e "${ERROR}[-] Error: You must be root to run this script${NC}"
         exit 1
+    fi
+
+    # The following remaining checks are for the generation of certificates
+    # and Nginx authentication. We can skip these if the user doesn't want
+    # A secure instance
+    if [[ $SECURITY == 0 ]]; then
+        return 0
     fi
 
     # Make sure that the user edited server_root.conf and v3.ext
@@ -232,15 +240,28 @@ echo -e "[*] Adding the repository to the list in /etc/sources... ${SUCCESS}Succ
 update_repos
 
 # Install elasticsearch, kibana, logstash, apt-transport-https, apache2-utils,
-# and nginx
-echo -n "[*] Installing elasticsearch, logstash, kibana, nginx, and apt-transport-https... "
-apt-get -y -q2 install apt-transport-https elasticsearch logstash kibana nginx \
-    apache2-utils > /dev/null 2>&1
+# and nginx if the user wants a secure instance. If not, omit nginx and
+# apache-utils
+if [[ $SECURITY == 1 ]]; then
+    echo -n "[*] Installing elasticsearch, logstash, kibana, nginx,"\
+        "apache2-utils, and apt-transport-https... "
+    apt-get -y -q2 install apt-transport-https elasticsearch logstash kibana \
+        nginx apache2-utils > /dev/null 2>&1
+else
+    echo -n "[*] Installing elasticsearch, logstash, kibana, and"\
+        "apt-transport-https... "
+    apt-get -y -q2 install apt-transport-https elasticsearch logstash kibana \
+        > /dev/null 2>&1
+fi
 check_error "attempting to install the packages" "apt-get install" $?
 
+
 # Generate certificates. The certificate generation done here satisfies the
-# strict Chrome/Chromium requirements for self-signed certs
-generate_certs
+# strict Chrome/Chromium requirements for self-signed certs. Skip if the
+# user does not want a secure instance
+if [[ $SECURITY == 1 ]]; then
+    generate_certs
+fi
 
 # Configure elasticsearch. We want to listen on localhost:9200
 echo -n "[*] Configuring elasticsearch... "
@@ -266,29 +287,38 @@ echo -n "[*] Configuring logstash... "
 if ! [ -d /etc/logstash/conf.d ]; then
     mkdir -p /etc/logstash/conf.d/
 fi
-sed -i -e 's|\"CERTS DIR HERE\"|'"$CERT_DIR"'/|g' conf/beatsInput.conf
 # Make sure we're using client certificates
-if [[ $CLIENT != 1 ]]; then
+if [[ $CLIENT != 1 ]] || [[ $SECURITY == 0 ]]; then
+    sed -i -e 's|\"CERTS DIR HERE\"|'"$CERT_DIR"'/|g' conf/beatsInput.conf
     sed -i -e "s/true/false  # User didn\'t generate client cert/g" conf/beatsInput.conf
 fi
 mv conf/beatsInput.conf /etc/logstash/conf.d/
 chown -R logstash:logstash /etc/logstash
 echo -e "${SUCCESS}Success${NC}"
 
-# Configure nginx
-echo -n "[*] Configuring nginx... "
-sed -i -e 's|\"CERTS DIR HERE\"|'"$CERT_DIR"'/|g' conf/default
-sed -i -e 's/"IP ADDR HERE"/'"$IP_ADDR"'/g' conf/default
-cp conf/default /etc/nginx/sites-available/
-mv conf/default /etc/nginx/sites-enabled/
-sudo htpasswd -b -c /etc/nginx/.htpasswd admin "$PASSWORD"
-echo -e "${SUCCESS}Success${NC}"
+# Configure nginx if the user wants a secure enviornment
+# otherwise, configure Kibana
+if [[ $SECURITY == 1 ]]; then
+    echo -n "[*] Configuring nginx... "
+    sed -i -e 's|\"CERTS DIR HERE\"|'"$CERT_DIR"'/|g' conf/default
+    sed -i -e 's/"IP ADDR HERE"/'"$IP_ADDR"'/g' conf/default
+    cp conf/default /etc/nginx/sites-available/
+    mv conf/default /etc/nginx/sites-enabled/
+    sudo htpasswd -b -c /etc/nginx/.htpasswd admin "$PASSWORD"
+    echo -e "${SUCCESS}Success${NC}"
 
-# Generate the dhparams for nginx
-echo -e "[*] Creating dhparams file for nginx - ${WARNING}WARNING - THIS WILL TAKE A LONG TIME${NC}"
-mkdir $CERT_DIR/nginx/dhgroup/
-openssl dhparam -out $CERT_DIR/nginx/dhgroup/dhparam.pem $DHPARAM_SIZE
-echo -e "${SUCCESS}Success${NC}"
+    # Generate the dhparams for nginx
+    echo -e "[*] Creating dhparams file for nginx - ${WARNING}WARNING - THIS WILL TAKE A LONG TIME${NC}"
+    mkdir $CERT_DIR/nginx/dhgroup/
+    openssl dhparam -out $CERT_DIR/nginx/dhgroup/dhparam.pem $DHPARAM_SIZE
+    echo -e "${SUCCESS}Success${NC}"
+else
+    echo -n "[*] Configuring Kibana... "
+    # Change the socket from localhost:5601 to 0.0.0.0:80
+    sed -i -e 's/#server.port: 5601/server.port: 80/g' /etc/kibana/kibana.yml
+    sed -i -e 's/#server.host: "localhost"/server.host: 0.0.0.0/g' /etc/kibana/kibana.yml
+    echo -e "${SUCCESS}Success${NC}"
+fi
 
 # Start all the services! We're done =)
 echo -n "[*] Starting elasticsearch... "
@@ -300,10 +330,16 @@ check_error "attempting to start logstash" "service logstash start" $?
 echo -n "[*] Starting kibana... "
 service kibana start
 check_error "attempting to start kibana" "service kibana start" $?
-echo -n "[*] Starting nginx... "
-service nginx restart
-check_error "attempting to restart nginx" "service nginx restart" $?
+# Nginx only exists if we're doing a secure install
+if [[ $SECURITY == 1 ]]; then
+    echo -n "[*] Starting nginx... "
+    service nginx restart
+    check_error "attempting to restart nginx" "service nginx restart" $?
 
-echo -e "\n\n${SUCCESS}[+] Successfully installed the ELK stack${NC}\n Your"\
-    "username for nginx's basic authentication prompt is admin. The password"\
-    "is the password you configured earlier. Have fun!"
+    # Inform user of nginx credentials
+    echo -e "\n\nYour username for nginx's basic authentication prompt is"\
+        "${WARNING}admin${NC}. The pasword is the password you configured"\
+        "earlier."
+fi
+
+echo -e "\n\n${SUCCESS}[+] Successfully installed the ELK stack${NC}. Have fun!"
