@@ -25,12 +25,14 @@ For specific details on how it works, please see the
 * Latest version of OpenJDK 8
 
 ## Prerequisites
-* The server that will be running the ELK stack should have a DNS resolvable hostname.
-If this is not the case, you will not be able to generate certificates using this program
-(at this point in time)
-* If you plan on using one of the [ELK beats data shippers](https://elastic.co/products/beats)
-for one of your clients, you will need to enter the DNS resolvable name of one
-of your clients into client.conf
+* If you wish to secure all communications with your ELK instance, the server that will
+be running the ELK stack AND all clients you wish to send logs from should have DNS 
+resolvable hostnames. You can send logs from your clients to the Logstash instance
+running on the ELKAutomation server using one of the 
+[ELK beats data shippers](https://elastic.co/products/beats). If neither your server
+nor your clients have resolvable hostnames, the certificates generated using this
+program will not function correctly. If your clients do not have DNS resolvable
+hostnames but your sever does, you can still secure communications to the nginx instance.
 * ELKAutomation currently only supports systems that use the apt package manager.
 Contributions to ELKAutomation that have support for other systems are welcome =)
 
