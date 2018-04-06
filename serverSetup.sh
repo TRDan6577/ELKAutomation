@@ -314,8 +314,7 @@ if [[ $SECURITY == 1 ]]; then
     echo -e "${SUCCESS}Success${NC}"
 else
     echo -n "[*] Configuring Kibana... "
-    # Change the socket from localhost:5601 to 0.0.0.0:80
-    sed -i -e 's/#server.port: 5601/server.port: 80/g' /etc/kibana/kibana.yml
+    # Change the socket from localhost:5601 to 0.0.0.0:5061
     sed -i -e 's/#server.host: "localhost"/server.host: 0.0.0.0/g' /etc/kibana/kibana.yml
     echo -e "${SUCCESS}Success${NC}"
 fi
