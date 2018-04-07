@@ -40,11 +40,13 @@ Contributions to ELKAutomation that have support for other systems are welcome =
 `git clone https://github.com/trdan6577/elkautomation.git`
 
 ## Usage
+
 ### Secure Server Setup
-In order to install the ELK stack using this program, you MUST edit
+In order to install and secure the ELK stack using this program, you MUST edit
 client.conf, server\_root.conf, and v3.ext. Conveniently, the parts you need
 to edit are surrounded by carrots (< >). Just give the carrots the value they ask
-for and the remove the carrots. After filling out these three files, just run
+for and the remove the carrots. After filling out these three files, edit the line
+in automation.conf so that it says `SECURITY=1`. Then run
 serverSetup.sh with administrative privileges.
 
 ### Insecure Server Setup
